@@ -1,0 +1,102 @@
+# Configuration directe pour Aurora AWS avec les vraies valeurs
+# Ce profil utilise directement les endpoints Aurora fournis
+
+spring:
+  application:
+    name: aurora-read-write-splitter
+  
+  # Configuration JPA/Hibernate pour Aurora
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+        use_sql_comments: true
+        # Configuration pour optimiser les performances avec Aurora
+        connection:
+          provider_disables_autocommit: true
+        # Logging des requêtes SQL pour le debugging
+        logging:
+          level:
+            org.hibernate.SQL: DEBUG
+            org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  
+  # Configuration des DataSources pour Aurora AWS
+  datasource:
+    # DataSource pour les opérations d'écriture (Writer Endpoint Aurora)
+    writer:
+      jdbc-url: jdbc:mysql://database-1.cluster-c3s62s8yy2tl.eu-west-3.rds.amazonaws.com:3306/database-1
+      username: admin
+      password: (ixQk(lEyK3UL5KdMHbhRyhC#q7J
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      # Configuration du pool de connexions pour les écritures
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 5
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        connection-test-query: SELECT 1
+        pool-name: AuroraWriterPool
+    
+    # DataSource pour les opérations de lecture (Reader Endpoint Aurora)
+    reader:
+      jdbc-url: jdbc:mysql://database-1.cluster-ro-c3s62s8yy2tl.eu-west-3.rds.amazonaws.com:3306/database-1
+      username: admin
+      password: (ixQk(lEyK3UL5KdMHbhRyhC#q7J
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      # Configuration du pool de connexions pour les lectures (plus de connexions car plus de requêtes)
+      hikari:
+        maximum-pool-size: 20
+        minimum-idle: 10
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        connection-test-query: SELECT 1
+        pool-name: AuroraReaderPool
+
+# Configuration du logging pour démontrer le routage
+logging:
+  level:
+    com.aurora: DEBUG
+    com.aurora.routing: DEBUG
+    com.aurora.service: DEBUG
+    com.aurora.controller: DEBUG
+    org.springframework.transaction: DEBUG
+    org.springframework.jdbc: DEBUG
+    # Logging spécifique pour voir les requêtes SQL
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/aurora-read-write-splitter.log
+
+# Configuration pour le développement
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Configuration des endpoints Aurora
+aurora:
+  config:
+    # Endpoints Aurora (valeurs directes)
+    writer-endpoint: database-1.cluster-c3s62s8yy2tl.eu-west-3.rds.amazonaws.com
+    reader-endpoint: database-1.cluster-ro-c3s62s8yy2tl.eu-west-3.rds.amazonaws.com
+    database-name: database-1
+    username: admin
+    password: (ixQk(lEyK3UL5KdMHbhRyhC#q7J
+    # Configuration du routage
+    routing:
+      enabled: true
+      default-target: WRITER
+      read-only-target: READER 
